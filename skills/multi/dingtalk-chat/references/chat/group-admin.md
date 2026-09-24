@@ -111,7 +111,7 @@ dws chat group user-settings set \
 | 修改公告 | `group notice edit --group <cid> --notice-id <id> --content <完整Markdown>` |
 | 查询公告 | `group notice get/list` |
 
-定时公告 `--run-at` 使用带时区时间；`notice list --scheduled` 查询待发布公告。分页时沿真实
+定时公告 `--run-at` 使用 `yyyy-MM-dd HH:mm:ss`（北京时间，也兼容 ISO-8601 输入）；`notice list --scheduled` 查询待发布公告。分页时沿真实
 `nextPageCursor` 继续。修改前必须取得完整替换正文，不把增量片段当整篇公告。
 
 ## 入群审批与群身份

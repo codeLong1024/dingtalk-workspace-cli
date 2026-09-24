@@ -348,13 +348,13 @@ Usage:
 Example:
   dws chat group notice create --group <openConversationId> --content "今晚 22 点系统维护，请提前保存工作内容"
   dws chat group notice create --group <openConversationId> --content "# 重要通知\n请大家查收" --sticky --send-ding
-  dws chat group notice create --group <openConversationId> --content "明早九点例会" --run-at "2026-07-03T09:00:00+08:00"
+  dws chat group notice create --group <openConversationId> --content "明早九点例会" --run-at "2026-07-03 09:00:00"
 Flags:
       --group string       群聊 openConversationId (必填)
       --content string     公告正文，Markdown 格式 (必填)
       --sticky             是否吊顶置顶（默认 false）
       --send-ding          是否发 DING 提醒（默认 false）
-      --run-at string      定时发布时间 ISO-8601（传入则定时发布）
+      --run-at string      定时发布时间 yyyy-MM-dd HH:mm:ss（按北京时间，传入则定时发布）
 ```
 
 #### 修改群公告 — 整体替换指定群公告的内容

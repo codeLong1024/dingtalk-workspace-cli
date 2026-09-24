@@ -1463,6 +1463,23 @@ func defaultChatMessageListTime() string {
 	return time.Now().In(shanghaiLocation()).Format("2006-01-02 15:04:05")
 }
 
+// normalizeNoticeRunAtText normalizes the --run-at input of
+// `chat group notice create` into the backend runAtText wire format
+// "yyyy-MM-dd HH:mm:ss" (Asia/Shanghai). Accepts ISO-8601 / RFC3339
+// timestamps (e.g. 2026-07-03T09:00:00+08:00) and the wire format itself.
+func normalizeNoticeRunAtText(raw string) (string, error) {
+	value := strings.TrimSpace(raw)
+	shanghai := shanghaiLocation()
+	if t, err := time.ParseInLocation("2006-01-02 15:04:05", value, shanghai); err == nil {
+		return t.Format("2006-01-02 15:04:05"), nil
+	}
+	if t, err := time.Parse(time.RFC3339, value); err == nil {
+		return t.In(shanghai).Format("2006-01-02 15:04:05"), nil
+	}
+	return "", apperrors.NewValidation(fmt.Sprintf(
+		"invalid --run-at format %q, use yyyy-MM-dd HH:mm:ss or ISO-8601 (e.g. 2026-07-03T09:00:00+08:00)", raw))
+}
+
 func chatMessageSearchAdvancedArgs(cmd *cobra.Command) (map[string]any, error) {
 	toolArgs := map[string]any{}
 	if v := flagOrFallback(cmd, "query", "keyword"); v != "" {
@@ -11028,10 +11045,10 @@ status 可选值:
 		Short: "发布群公告",
 		Long: `在指定群聊中发布群公告，正文为 Markdown 格式。
 支持标题、加粗、斜体、删除线、行内代码、链接、代码块、有序/无序/任务列表、表格、引用、分割线、图片、段落、换行。
-定时发布：传 --run-at 指定执行时间点，ISO-8601 格式（建议带时区偏移，不带时按北京时区处理）。`,
+定时发布：传 --run-at 指定执行时间点，格式 yyyy-MM-dd HH:mm:ss（按北京时间，也兼容 ISO-8601 输入，如 2026-07-03T09:00:00+08:00）。`,
 		Example: `  dws chat group notice create --conversation-id <openConversationId> --content "今晚 22 点系统维护，请提前保存工作内容"
   dws chat group notice create --conversation-id <openConversationId> --content "# 重要通知\n请大家查收" --sticky --send-ding
-  dws chat group notice create --conversation-id <openConversationId> --content "明早九点例会" --run-at "2026-07-03T09:00:00+08:00"
+  dws chat group notice create --conversation-id <openConversationId> --content "明早九点例会" --run-at "2026-07-03 09:00:00"
   # 查询群 ID: dws chat search --query "群名"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := validateRequiredFlags(cmd, "conversation-id", "content"); err != nil {
@@ -11048,8 +11065,12 @@ status 可选值:
 				toolArgs["sendDing"] = true
 			}
 			if v, _ := cmd.Flags().GetString("run-at"); v != "" {
+				runAtText, err := normalizeNoticeRunAtText(v)
+				if err != nil {
+					return err
+				}
 				toolArgs["scheduled"] = true
-				toolArgs["runAtText"] = v
+				toolArgs["runAtText"] = runAtText
 			}
 			return callMCPToolOnServer("im", "create_group_notice", toolArgs)
 		},
@@ -11060,7 +11081,7 @@ status 可选值:
 	_ = chatGroupNoticeCreateCmd.MarkFlagRequired("content")
 	chatGroupNoticeCreateCmd.Flags().Bool("sticky", false, "是否吊顶置顶（默认 false）")
 	chatGroupNoticeCreateCmd.Flags().Bool("send-ding", false, "是否发 DING 提醒（默认 false）")
-	chatGroupNoticeCreateCmd.Flags().String("run-at", "", "定时发布时间 ISO-8601（如 2026-07-03T09:00:00+08:00，传入则定时发布）")
+	chatGroupNoticeCreateCmd.Flags().String("run-at", "", "定时发布时间，格式 yyyy-MM-dd HH:mm:ss（按北京时间，也兼容 ISO-8601 输入，传入则定时发布）")
 	DeclareLeafMetadata(chatGroupNoticeCreateCmd, LeafSpec{
 		Safety: contract.SafetySpec{
 			Effect: "write", Risk: "medium",
